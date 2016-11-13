@@ -341,6 +341,19 @@ func TestAll(t *testing.T) {
 			input: `{"invalid:t":"This is not a valid timestamp"}`,
 			err:   ErrTimeInvalid,
 		},
+
+		// --- custom tests ---
+		{
+			name:        "Pointer to tagged struct",
+			description: "Should be able to handle tjson tags.",
+
+			input: `{"example:t","2016-10-02T07:31:51Z"}`,
+			res: struct {
+				Example time.Time `tjson:"example"`
+			}{
+				Example: time.Date(2016, time.October, 2, 7, 31, 51, 0, time.UTC),
+			},
+		},
 	}
 
 	for i := range testcases {

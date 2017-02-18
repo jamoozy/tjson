@@ -6,23 +6,57 @@
 package tjson
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"reflect"
 )
 
 // Marshal converts an arbitrary interface into a byte array.
 //
 // See also encoding/json.Marshal
 func Marshal(v interface{}) ([]byte, error) {
-	return nil, errors.New("not impl")
+	return json.Marshal(v)
+	//return nil, errors.New("not impl")
 }
 
 // MarshalIndent marshals an arbitrary interface into an indented TJSON string returned as a byte
 // slice.
 func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
-	return nil, errors.New("not impl")
+	return json.MarshalIndent(v, prefix, indent)
+	//return nil, errors.New("not impl")
 }
 
 // Unmarshal unmarshals TJSON data into an interface.
 func Unmarshal(data []byte, v interface{}) error {
-	return errors.New("not impl")
+	var sj interface{}
+	if err := json.Unmarshal(data, &sj); err != nil {
+		return err
+	}
+
+	switch v := v.(type) {
+	case map[string]interface{}:
+	case []map[string]interface{}:
+	case *interface{}:
+	default:
+		return fmt.Errorf("Unrecognized type: %v.(%T)", v, v)
+	}
+
+	if reflect.TypeOf(v).Kind() != reflect.Ptr {
+		return errors.New("tjson: Non-pointer passed.")
+	}
+
+	return nil
 }
+
+//// simpleJSON is an abstraction used to
+//type simpleJSON interface{}
+//
+//// Iterates through the keys and values in the
+//func (sj *simpleJSON) convertTo(v interface{}) error {
+//	if reflect.TypeOf(v).Kind() != reflect.Ptr {
+//		return errors.New("tjson: Non-pointer passed.")
+//	}
+//	v = sj
+//	return nil
+//}

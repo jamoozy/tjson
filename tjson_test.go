@@ -27,7 +27,7 @@ func (tc *TJSONTestCase) Run(t *testing.T) {
 
 	// Unmarshal the TJSON and verify that either its error or its result is the expected one.
 	var res interface{}
-	if err := Unmarshal([]byte(tc.input), res); err != tc.err {
+	if err := Unmarshal([]byte(tc.input), &res); err != tc.err {
 		t.Fatalf("Errors differ: %v != %v", tc.err, err)
 	} else if !reflect.DeepEqual(res, tc.res) {
 		t.Fatalf("Expected %#v, got %#v", tc.res, res)
@@ -41,7 +41,11 @@ func (tc *TJSONTestCase) Run(t *testing.T) {
 		t.Fatalf("Could not re-marshal: %s", err.Error())
 	} else if len(dat) <= 0 {
 		t.Fatalf("Returned empty data.")
+	} else if input := string(dat); len(input) != len(tc.input) {
+		t.Fatalf("Returned different strings:\n  %s\n  %s", tc.input, input)
 	}
+
+	t.Logf("Success!")
 }
 
 func TestAll(t *testing.T) {
@@ -51,7 +55,7 @@ func TestAll(t *testing.T) {
 			description: "Arrays are allowed as a toplevel value and can be empty",
 
 			input: `[]`,
-			res:   []map[string]interface{}{},
+			res:   []interface{}{},
 		},
 
 		{
@@ -343,9 +347,23 @@ func TestAll(t *testing.T) {
 		},
 
 		// --- custom tests ---
+		// The following tests are Go-specific.  They're here to maintain the common paradigms that were
+		// established in the "encoding/json" module, e.g., `json:"name"` tag handling.
 		{
-			name:        "Pointer to tagged struct",
-			description: "Should be able to handle tjson tags.",
+			name:        "Pointer to JSON-tagged struct",
+			description: "Should be able to handle `json` tags.",
+
+			input: `{"example:t","2016-10-02T07:31:51Z"}`,
+			res: struct {
+				Example time.Time `json:"example"`
+			}{
+				Example: time.Date(2016, time.October, 2, 7, 31, 51, 0, time.UTC),
+			},
+		},
+
+		{
+			name:        "Pointer to TJSON-tagged struct",
+			description: "Should be able to handle `tjson` tags.",
 
 			input: `{"example:t","2016-10-02T07:31:51Z"}`,
 			res: struct {

@@ -34,3 +34,9 @@ var (
 
 	ErrTimeInvalid Error = errors.New("Invalid time format.")
 )
+
+// These are Go-specific errors.  They relate more to how TJSON is implemented in Go than anything
+// inherent to TJSON itself.
+var (
+	ErrInvalidArg Error = errors.New("tjson: Need non-nil pointer.")
+)

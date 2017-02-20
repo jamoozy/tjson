@@ -7,9 +7,8 @@ package tjson
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"reflect"
+	"fmt"
 )
 
 // Marshal converts an arbitrary interface into a byte array.
@@ -29,21 +28,60 @@ func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
 
 // Unmarshal unmarshals TJSON data into an interface.
 func Unmarshal(data []byte, v interface{}) error {
-	var sj interface{}
-	if err := json.Unmarshal(data, &sj); err != nil {
+	vv := reflect.ValueOf(v)
+	if vv.Kind() != reflect.Ptr || vv.IsNil() {
+		return ErrInvalidArg
+	}
+
+	var u interface{}
+	if err := json.Unmarshal(data, &u); err != nil {
 		return err
 	}
 
-	switch v := v.(type) {
-	case map[string]interface{}:
-	case []map[string]interface{}:
-	case *interface{}:
-	default:
-		return fmt.Errorf("Unrecognized type: %v.(%T)", v, v)
+	return unpack(vv, reflect.ValueOf(&u))
+}
+
+// Unpacks the contents of `src' into `dst'.  `src' should be an interface{} value processed by the
+// "json" module.  `dst' is the result after interpreting the contents of `src' in TJSON. `k' is the
+// expected Kind (type) of the dst value.  If it isn't that type or
+func unpack(dst, src reflect.Value) error {
+	if dst.Kind() != reflect.Ptr || dst.IsNil() {
+		return ErrInvalidArg
 	}
 
-	if reflect.TypeOf(v).Kind() != reflect.Ptr {
-		return errors.New("tjson: Non-pointer passed.")
+	// "Drill down" to the actual source element we want to clone.
+	for src.Kind() == reflect.Ptr || src.Kind() == reflect.Interface {
+		src = src.Elem()
+	}
+
+	// For arrays, call this function recursively for each sub-element.
+	switch src.Kind() {
+	case reflect.Array, reflect.Slice:
+		l := src.Len()
+		dst.Elem().Set(reflect.ValueOf(make([]interface{}, l)))
+		for i := 0; i < l; i++ {
+			var subDstVal interface{}
+			if err := unpack(reflect.ValueOf(&subDstVal), src.Index(i)); err != nil {
+				return err
+			}
+			reflect.Append(dst.Elem(), reflect.ValueOf(subDstVal))
+		}
+
+	case reflect.Map:
+		dst.Elem().Set(reflect.ValueOf(map[string]interface{}{}))
+		for _, k := range src.MapKeys() {
+			var subDstVal interface{}
+			if err := unpack(reflect.ValueOf(&subDstVal), src.MapIndex(k)); err != nil {
+				return err
+			}
+			dst.Elem().Elem().SetMapIndex(k, reflect.ValueOf(subDstVal))
+		}
+
+	case reflect.String:
+		dst.Elem().Set(src)
+
+	default:
+		return fmt.Errorf("Unrecognized type: %+v", src.Kind())
 	}
 
 	return nil

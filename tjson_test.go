@@ -21,33 +21,6 @@ type TJSONTestCase struct {
 	res interface{}
 }
 
-func (tc *TJSONTestCase) Run(t *testing.T) {
-	t.Logf("Running test case: %q", tc.name)
-	t.Logf("%s", tc.description)
-
-	// Unmarshal the TJSON and verify that either its error or its result is the expected one.
-	var res interface{}
-	if err := Unmarshal([]byte(tc.input), &res); err != tc.err {
-		t.Fatalf("Errors differ: %v != %v", tc.err, err)
-	} else if !reflect.DeepEqual(res, tc.res) {
-		t.Fatalf("Expected %#v, got %#v", tc.res, res)
-	}
-
-	// Re-marshal the result to verify that the the reverse works.
-	//
-	// Ideally we'd compare the resultant TJSON with our tc.input var.  TJSON give no guarantee of
-	// order though, so we can't :-(
-	if dat, err := Marshal(tc.res); err != nil {
-		t.Fatalf("Could not re-marshal: %s", err.Error())
-	} else if len(dat) <= 0 {
-		t.Fatalf("Returned empty data.")
-	} else if input := string(dat); len(input) != len(tc.input) {
-		t.Fatalf("Returned different strings:\n  %s\n  %s", tc.input, input)
-	}
-
-	t.Logf("Success!")
-}
-
 func TestAll(t *testing.T) {
 	testcases := []TJSONTestCase{
 		{
@@ -374,7 +347,30 @@ func TestAll(t *testing.T) {
 		},
 	}
 
-	for i := range testcases {
-		testcases[i].Run(t)
+	for _, tc := range testcases {
+		t.Logf("Running test case: %q", tc.name)
+		t.Logf("%s", tc.description)
+
+		// Unmarshal the TJSON and verify that either its error or its result is the expected one.
+		var res interface{}
+		if err := Unmarshal([]byte(tc.input), &res); err != tc.err {
+			t.Fatalf("Errors differ: %v != %v", tc.err, err)
+		} else if !reflect.DeepEqual(res, tc.res) {
+			t.Fatalf("Expected %#v, got %#v", tc.res, res)
+		}
+
+		// Re-marshal the result to verify that the the reverse works.
+		//
+		// Ideally we'd compare the resultant TJSON with our tc.input var.  TJSON give no guarantee of
+		// order though, so we can't :-(
+		if dat, err := Marshal(tc.res); err != nil {
+			t.Fatalf("Could not re-marshal: %s", err.Error())
+		} else if len(dat) <= 0 {
+			t.Fatalf("Returned empty data.")
+		} else if input := string(dat); len(input) != len(tc.input) {
+			t.Fatalf("Returned different strings:\n  %s\n  %s", tc.input, input)
+		}
+
+		t.Logf("Success!")
 	}
 }
